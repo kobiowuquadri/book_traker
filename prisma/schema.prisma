@@ -1,0 +1,34 @@
+// Prisma schema for BookShelf project
+// SQLite database
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum BookStatus {
+  READ
+  CURRENTLY_READING
+  WANT_TO_READ
+}
+
+model User {
+  id    String  @id @default(uuid())
+  email String  @unique
+  books Book[]
+}
+
+model Book {
+  id        String     @id @default(uuid())
+  userId    String
+  googleId  String
+  title     String
+  author    String
+  imageUrl  String?
+  status    BookStatus @default(WANT_TO_READ)
+  user      User       @relation(fields: [userId], references: [id])
+}
