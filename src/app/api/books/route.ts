@@ -11,31 +11,25 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Missing search query' }, { status: 400 });
   }
 
+  if (query.trim().length < 2) {
+    return NextResponse.json({ error: 'Search query must be at least 2 characters long' }, { status: 400 });
+  }
+
   try {
-    // Google Books API URL with optional API key
-    const apiKey = process.env.GOOGLE_BOOKS_API_KEY;
-    const baseUrl = 'https://www.googleapis.com/books/v1/volumes';
-    const params = new URLSearchParams({
-      q: query,
-      startIndex,
-      maxResults,
-      key: apiKey || '',
-    });
-
-    const url = `${baseUrl}?${params.toString()}`;
+    const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&startIndex=${startIndex}&maxResults=${maxResults}`;
+    console.log('Fetching from Google Books API:', url);
+    
     const res = await fetch(url);
-
+    
     if (!res.ok) {
       throw new Error(`Google Books API error: ${res.status}`);
     }
 
     const data = await res.json();
     
-    // Transform the data to match our needs
     const transformedData = {
       totalItems: data.totalItems || 0,
       items: data.items?.map((item: any) => {
-        // Convert HTTP image URLs to HTTPS
         let imageUrl = item.volumeInfo?.imageLinks?.thumbnail || null;
         if (imageUrl && imageUrl.startsWith('http://')) {
           imageUrl = imageUrl.replace('http://', 'https://');
