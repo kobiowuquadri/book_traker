@@ -1,12 +1,12 @@
 // Prisma schema for BookShelf project
-// SQLite database
+// PostgreSQL database for production
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -17,9 +17,11 @@ enum BookStatus {
 }
 
 model User {
-  id    String  @id @default(uuid())
-  email String  @unique
-  books Book[]
+  id       String  @id @default(uuid())
+  email    String  @unique
+  name     String?
+  password String?
+  books    Book[]
 }
 
 model Book {
@@ -31,4 +33,6 @@ model Book {
   imageUrl  String?
   status    BookStatus @default(WANT_TO_READ)
   user      User       @relation(fields: [userId], references: [id])
+  
+  @@unique([userId, googleId]) // Prevent duplicate books per user
 }
