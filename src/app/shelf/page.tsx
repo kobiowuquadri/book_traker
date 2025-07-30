@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getShelf, updateBookStatus, removeFromShelf, ShelfBook, DEMO_USER_ID } from '@/lib/api';
+import { getShelf, updateBookStatus, removeFromShelf, ShelfBook } from '@/lib/api';
 import ShelfBookCard from '@/components/ShelfBookCard';
+import { useSession } from 'next-auth/react';
 
 type FilterStatus = 'ALL' | 'READ' | 'CURRENTLY_READING' | 'WANT_TO_READ';
 
 export default function ShelfPage() {
+  const { data: session, status } = useSession();
   const [books, setBooks] = useState<ShelfBook[]>([]);
   const [filteredBooks, setFilteredBooks] = useState<ShelfBook[]>([]);
   const [loading, setLoading] = useState(true);
@@ -14,11 +16,14 @@ export default function ShelfPage() {
   const [filter, setFilter] = useState<FilterStatus>('ALL');
   const [updatingBookId, setUpdatingBookId] = useState<string | null>(null);
   const [removingBookId, setRemovingBookId] = useState<string | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    checkAuthAndLoadShelf();
-  }, []);
+    if (session?.user?.id) {
+      checkAuthAndLoadShelf();
+    } else if (status === 'unauthenticated') {
+      setLoading(false);
+    }
+  }, [session, status]);
 
   useEffect(() => {
     if (filter === 'ALL') {
@@ -29,14 +34,14 @@ export default function ShelfPage() {
   }, [books, filter]);
 
   const checkAuthAndLoadShelf = async () => {
+    if (!session?.user?.id) return;
+    
     try {
       setLoading(true);
-      const shelf = await getShelf(DEMO_USER_ID);
+      const shelf = await getShelf(session.user.id);
       setBooks(shelf);
-      setIsAuthenticated(true);
     } catch (error) {
       console.error('Failed to load shelf - user may not be authenticated:', error);
-      setIsAuthenticated(false);
       setError('Please sign in to view your shelf.');
     } finally {
       setLoading(false);
@@ -88,7 +93,7 @@ export default function ShelfPage() {
   };
 
   // Show authentication required message
-  if (!isAuthenticated && !loading) {
+  if (status === 'unauthenticated' && !loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="max-w-md w-full mx-auto p-8">
@@ -112,7 +117,7 @@ export default function ShelfPage() {
     );
   }
 
-  if (loading) {
+  if (loading || status === 'loading') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
@@ -130,6 +135,9 @@ export default function ShelfPage() {
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-800 mb-2">My Shelf</h1>
           <p className="text-gray-600">Manage your personal book collection</p>
+          {session?.user?.name && (
+            <p className="text-sm text-gray-500 mt-2">Welcome back, {session.user.name}!</p>
+          )}
         </div>
 
         {/* Error Message */}

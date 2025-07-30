@@ -116,7 +116,4 @@ export async function removeFromShelf(id: string): Promise<void> {
   if (!response.ok) {
     throw new Error('Failed to remove book from shelf');
   }
-}
-
-// Temporary user ID for demo (in real app, this would come from authentication)
-export const DEMO_USER_ID = 'demo-user-123'; 
+} 

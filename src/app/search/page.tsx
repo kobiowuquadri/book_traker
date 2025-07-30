@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { searchBooks, addToShelf, getShelf, Book, ShelfBook, DEMO_USER_ID } from '@/lib/api';
+import { searchBooks, addToShelf, getShelf, Book, ShelfBook } from '@/lib/api';
 import BookCard from '@/components/BookCard';
+import { useSession } from 'next-auth/react';
 
 export default function SearchPage() {
+  const { data: session, status } = useSession();
   const [query, setQuery] = useState('');
   const [books, setBooks] = useState<Book[]>([]);
   const [shelfBooks, setShelfBooks] = useState<ShelfBook[]>([]);
@@ -14,23 +16,22 @@ export default function SearchPage() {
   const [totalResults, setTotalResults] = useState(0);
   const [currentPage, setCurrentPage] = useState(0);
   const [addingBookId, setAddingBookId] = useState<string | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // Check authentication and load shelf on component mount
   useEffect(() => {
-    checkAuthAndLoadShelf();
-  }, []);
+    if (session?.user?.id) {
+      checkAuthAndLoadShelf();
+    }
+  }, [session]);
 
   const checkAuthAndLoadShelf = async () => {
+    if (!session?.user?.id) return;
+    
     try {
-      // For now, we'll use a simple check - in a real app, this would check session/token
-      // You can implement proper auth check here when you add authentication
-      const shelf = await getShelf(DEMO_USER_ID);
+      const shelf = await getShelf(session.user.id);
       setShelfBooks(shelf);
-      setIsAuthenticated(true);
     } catch (error) {
       console.error('Failed to load shelf - user may not be authenticated:', error);
-      setIsAuthenticated(false);
     }
   };
 
@@ -54,7 +55,7 @@ export default function SearchPage() {
   };
 
   const handleAddToShelf = async (book: Book) => {
-    if (!isAuthenticated) {
+    if (!session?.user?.id) {
       setError('Please sign in to add books to your shelf.');
       return;
     }
@@ -63,7 +64,7 @@ export default function SearchPage() {
     
     try {
       await addToShelf({
-        userId: DEMO_USER_ID,
+        userId: session.user.id,
         googleId: book.googleId,
         title: book.title,
         author: book.author,
@@ -77,7 +78,6 @@ export default function SearchPage() {
         setError('This book is already in your shelf!');
       } else if (error.message.includes('User not found') || error.message.includes('401')) {
         setError('Please sign in to add books to your shelf.');
-        setIsAuthenticated(false);
       } else {
         setError('Failed to add book to shelf. Please try again.');
       }
@@ -99,6 +99,8 @@ export default function SearchPage() {
   const handleLoadMore = () => {
     handleSearch(query, currentPage + 1);
   };
+
+  const isAuthenticated = !!session?.user?.id;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
